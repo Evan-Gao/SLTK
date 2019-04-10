@@ -1,4 +1,4 @@
-model: NER
+model: BiLSTM-CNN-CRF
 
 # 注: 所有路径都需以项目为根目录写起.
 
@@ -6,10 +6,10 @@ model: NER
 data_params:
 
   # 训练、开发、测试数据路径
-  path_train: ./data/train.bieso.txt
-  path_dev: ./data/valid.bieso.txt
-  path_test: ./data/test.bieso.txt
-  path_test_result: ./data/test.bieso.txt.output  # default is path_test+'.output'
+  path_train: /research/king3/ik_grp/yfgao/semi-supervised-QG/data/train_bilstmcnncrf.json
+  path_dev: /research/king3/ik_grp/yfgao/semi-supervised-QG/data/test_bilstmcnncrf.json
+  path_test: /research/king3/ik_grp/yfgao/semi-supervised-QG/data/test_bilstmcnncrf.json
+  path_test_result: /research/king3/ik_grp/yfgao/semi-supervised-QG/data/test_bilstmcnncrf.json.output  # default is path_test+'.output'
 
   # 定义特征列数, 以及特征别名
   feature_cols: [0]
@@ -27,7 +27,7 @@ data_params:
     - null
 
   # 模型存放路径
-  path_model: ./data/models/ner_model
+  path_model: ./data/models/bilstmcnncrf_model_b128
 
 
 # 模型参数
@@ -56,7 +56,7 @@ model_params:
 
   # train parameters
   dev_size: 0.1  # 若没有`path_dev`参数, 则根据该值划分训练集
-  batch_size: 10
+  batch_size: 128
   dropout_rate: 0.5
   learning_rate: 0.015
   optimizer: sgd  # sgd, adam, adadelta, ...
@@ -64,7 +64,7 @@ model_params:
   lr_decay: 0.05  # only for sgd optimizer
   momentum: 0.
   clip: 5  # TODO grad clip
-  max_patience: 10
+  max_patience: 100
   nb_epoch: 1000
   average_batch: false
 

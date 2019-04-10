@@ -50,7 +50,7 @@ class SLTrainer(object):
     def fit(self):
         """训练模型
         """
-        best_dev_loss = 1.e8
+        best_dev_loss = 1.e20
         current_patience = 0
         for epoch in range(self.nb_epoch):
             train_loss, dev_loss = 0., 0.

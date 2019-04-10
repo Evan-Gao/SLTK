@@ -52,8 +52,8 @@ class Inference(object):
 
             logits = self.model(**feed_tensor_dict)
             # mask
-            mask = feed_tensor_dict[str(self.feature_names[0])] > 0
-            actual_lens = torch.sum(feed_tensor_dict[self.feature_names[0]] > 0, dim=1).int()
+            mask = feed_tensor_dict[str(self.model.feature_names[0])] > 0
+            actual_lens = torch.sum(feed_tensor_dict[self.model.feature_names[0]] > 0, dim=1).int()
             labels_batch = self.model.predict(logits, actual_lens, mask)
             labels_pred.extend(labels_batch)
             sys.stdout.write('sentence: {0} / {1}\r'.format(self.data_iter.iter_variable, self.data_iter.data_count))

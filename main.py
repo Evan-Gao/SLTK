@@ -42,9 +42,12 @@ from sltk.nn.modules import SLModel
 from sltk.train import SLTrainer
 from sltk.infer import Inference
 
+from tools.utils import loads_json
+from sltk.utils.span_prf import *
+
 import torch
 import torch.optim as optim
-
+import statistics
 
 def parse_opts():
     op = OptionParser()
@@ -99,7 +102,11 @@ def extract_feature_dict(path_data, feature_cols, feature_names, feature_dict,
         has_label: bool, 数据是否带有标签
     """
     data_idx = 0
-    for i, tokens_list in enumerate(read_conllu(path_data)):
+    data = loads_json(path_data, 'loading data')
+    for i, tokens_list in enumerate(data):
+        for j, tokens_list_i in enumerate(tokens_list):
+            tokens_list[j] = tuple(tokens_list_i)
+    # for i, tokens_list in enumerate(read_conllu(path_data)):
         sys.stdout.write('`{0}`: {1}\r'.format(path_data, i))
         sys.stdout.flush()
         update_feature_dict(
@@ -153,7 +160,11 @@ def data2hdf5(path_data, data_count, feature_cols, feature_names, token2id_dict,
     dataset_label = file_hdf5.create_dataset('label', shape=(data_count,), dtype=dt)
     dataset_dict['label'] = dataset_label
 
-    for i, tokens_list in enumerate(read_conllu(path_data)):
+    data = loads_json(path_data, 'loading data')
+    for i, tokens_list in enumerate(data):
+        for j, tokens_list_i in enumerate(tokens_list):
+            tokens_list[j] = tuple(tokens_list_i)
+    # for i, tokens_list in enumerate(read_conllu(path_data)):
         sys.stdout.write('`{0}`: {1}\r'.format(path_hdf5, i))
         sys.stdout.flush()
         for j, col in enumerate(feature_cols):
@@ -563,7 +574,73 @@ def test_model(configs):
         path_result=path_result, label2id_dict=label2id_dict)
 
     # do infer
-    infer.infer2file()
+    # infer.infer2file()
+    pred = infer.infer()
+
+    # evaluation
+    all_em_p, all_bin_p, all_prop_p = [], [], []
+    all_em_r, all_bin_r, all_prop_r = [], [], []
+    gold = loads_json(path_conllu_test, 'load gold data')
+    id2label_dict = {v: k for k, v in label2id_dict.items()}
+    for pred_label, gold_label in zip(pred, gold):
+        # convert gold spans into
+        gold_spans = get_span_nodict(gold_label[-1])
+        pred_spans = get_span(pred_label, id2label_dict)
+        # precision
+        em_p = em_precision(gold_spans, pred_spans)
+        bin_p = bin_precision(gold_spans, pred_spans)
+        prop_p = prop_precision(gold_spans, pred_spans)
+        all_em_p.extend(em_p)
+        all_bin_p.extend(bin_p)
+        all_prop_p.extend(prop_p)
+        # recall
+        em_r = em_recall(gold_spans, pred_spans)
+        bin_r = bin_recall(gold_spans, pred_spans)
+        prop_r = prop_recall(gold_spans, pred_spans)
+        all_em_r.extend(em_r)
+        all_bin_r.extend(bin_r)
+        all_prop_r.extend(prop_r)
+
+    all_em_r = statistics.mean(all_em_r)
+    all_bin_r = statistics.mean(all_bin_r)
+    all_prop_r = statistics.mean(all_prop_r)
+
+    if all_em_p:
+        all_em_p = statistics.mean(all_em_p)
+    else:
+        all_em_p = 0.
+    if all_bin_p:
+        all_bin_p = statistics.mean(all_bin_p)
+    else:
+        all_bin_p = 0.
+    if all_prop_p:
+        all_prop_p = statistics.mean(all_prop_p)
+    else:
+        all_prop_p = 0.
+
+    if all_em_p + all_em_r:
+        all_em_f = 2.0 * all_em_p * all_em_r / (all_em_p + all_em_r)
+    else:
+        all_em_f = 0
+    if all_bin_p + all_bin_r:
+        all_bin_f = 2.0 * all_bin_p * all_bin_r / (all_bin_p + all_bin_r)
+    else:
+        all_bin_f = 0
+    if all_prop_p + all_prop_r:
+        all_prop_f = 2.0 * all_prop_p * all_prop_r / (all_prop_p + all_prop_r)
+    else:
+        all_prop_f = 0
+
+    sys.stdout.write(
+        '\t EM precision: {0:4f}, Bin precision: {1:4f}, Prop precision:{2:4f}\n'. \
+        format(all_em_p, all_bin_p, all_prop_p))
+    sys.stdout.write(
+        '\t EM recall: {0:4f}, Bin recall: {1:4f}, Prop recall:{2:4f}\n'. \
+        format(all_em_r, all_bin_r, all_prop_r))
+    sys.stdout.write('\t EM f1: {0:4f}, Bin f1: {1:4f}, Prop f1:{2:4f}\n'. \
+                     format(all_em_f, all_bin_f, all_prop_f))
+    sys.stdout.flush()
+    print('debug')
 
 
 def main():
@@ -575,6 +652,7 @@ def main():
         if opts.preprocess:
             preprocessing(configs)
         # 训练
+
         train_model(configs)
     else:  # test
         test_model(configs)

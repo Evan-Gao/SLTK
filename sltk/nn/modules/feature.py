@@ -51,7 +51,7 @@ class CharFeature(nn.Module):
         char_conv_outputs = []
         for char_encoder in self.char_encoders:
             conv_output = char_encoder(input_embed)
-            pool_output = torch.squeeze(torch.max(conv_output, -2)[0])
+            pool_output = torch.squeeze(torch.max(conv_output, -2)[0], -1)
             char_conv_outputs.append(pool_output)
         char_conv_outputs = torch.cat(char_conv_outputs, dim=1)
 
